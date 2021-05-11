@@ -13,12 +13,14 @@ class Payment extends StatefulWidget {
   final DateTime end;
   final String userName;
   final String phone;
+  final rangeOfDayRent;
   Payment({
     this.carInfo,
     this.end,
     this.start,
     this.phone,
     this.userName,
+    this.rangeOfDayRent,
   });
 
   @override
@@ -29,16 +31,21 @@ class _PaymentState extends State<Payment> {
   var cash = false;
   var card = false;
 
-  var price;
+  var totalPrice;
   String paymentMethod;
   void totalPayment() {
-    var discount = widget.start.day.toDouble() - widget.end.day.toDouble();
-    if (widget.start.day == widget.end.day) {
-      price = widget.carInfo.pricePerDay;
-    } else if (discount.toDouble() * -1 > 7) {
-      price = (discount * double.parse(widget.carInfo.pricePerDay) * -1) * 0.8;
-    } else {
-      price = discount * double.parse(widget.carInfo.pricePerDay) * -1;
+    int price = int.parse(widget.carInfo.pricePerDay);
+    int dayRent = widget.rangeOfDayRent + 1;
+    if (widget.end.day != widget.start.day) {
+      totalPrice = price * dayRent;
+    }
+    if (dayRent > 6) {
+      double dis = (price.toDouble() * dayRent.toDouble()) * 0.8;
+      totalPrice = dis;
+    }
+    if (widget.start.day == widget.end.day &&
+        widget.start.month == widget.end.month) {
+      totalPrice = price;
     }
   }
 
@@ -49,10 +56,7 @@ class _PaymentState extends State<Payment> {
   }
 
   void availabilityCar() {
-    
-
-
-
+    print(totalPrice);
     if (cash == true) {
       paymentMethod = 'cash';
     }
@@ -61,7 +65,7 @@ class _PaymentState extends State<Payment> {
     }
     DatabaseReference carRef = FirebaseDatabase.instance
         .reference()
-        .child('cars/${widget.carInfo.key}');
+        .child('cars/${widget.carInfo.key}').child('availability');
     if (currentFirebaseUser != null) {
       Map availabilityCar = {
         'availability': 'not available',
@@ -70,10 +74,10 @@ class _PaymentState extends State<Payment> {
         'to': '${widget.end.year}/${widget.end.month}/${widget.end.day}',
         'name': widget.userName,
         'phone': widget.phone,
-        'dateOfFactor': widget.carInfo.pricePerDay,
+        'price': totalPrice,
         'payment_method': paymentMethod
       };
-      carRef.child('availability').set(availabilityCar);
+      carRef.push().set(availabilityCar);
     }
   }
 
@@ -151,7 +155,7 @@ class _PaymentState extends State<Payment> {
             ),
             SizedBox(height: 30),
             Text(
-              '${price}JD',
+              '${totalPrice}JD',
               style: TextStyle(fontSize: 40),
             ),
             SizedBox(height: 20),
